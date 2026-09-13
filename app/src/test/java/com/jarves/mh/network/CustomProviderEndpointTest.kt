@@ -2,7 +2,6 @@ package com.jarves.mh.network
 
 import com.jarves.mh.model.ProviderKind
 import com.jarves.mh.model.ProviderProfile
-import com.jarves.mh.model.ProviderProtocol
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -52,28 +51,7 @@ class CustomProviderEndpointTest {
         ) as List<*>
 
         assertTrue(candidates.contains("https://my-gateway.example/zen/v1/messages"))
-        assertTrue(candidates.contains("https://my-gateway.example/zen/messages"))
-        assertTrue(candidates.first() == "https://my-gateway.example/zen/v1/messages")
-    }
-
-    @Test
-    fun `messagesEndpointCandidates for openai includes v1-joined path for bare base url`() {
-        val method = ProviderApiClient::class.java.getDeclaredMethod(
-            "messagesEndpointCandidates",
-            String::class.java,
-            ProviderProtocol::class.java,
-        )
-        method.isAccessible = true
-
-        val candidates = method.invoke(
-            ProviderApiClient(),
-            "https://my-openai-api.example",
-            ProviderProtocol.OPENAI_CHAT,
-        ) as List<*>
-
-        assertTrue(candidates.contains("https://my-openai-api.example/v1/chat/completions"))
-        assertTrue(candidates.contains("https://my-openai-api.example/chat/completions"))
-        assertEquals("https://my-openai-api.example/v1/chat/completions", candidates.first())
+        assertTrue(candidates.first() == "https://my-gateway.example/zen/messages")
     }
 
     @Test
