@@ -58,25 +58,46 @@ class ProviderApiClient {
         if (baseUrl.isBlank() || model.isBlank() || apiKey.isBlank()) {
             return@withContext ConnectionValidation.Failure("Base URL, model, and API key are required.")
         }
-        val endpoint = messagesEndpoint(baseUrl, protocol)
         val body = validationBody(model, protocol)
-        val response = request(endpoint, "POST", apiKey, body, protocol, connectTimeoutMs = 8_000, readTimeoutMs = 10_000)
+        // Many custom gateways already end in /v1 (or /anthropic). Claude Code
+        // appends /v1/messages to ANTHROPIC_BASE_URL itself, so a naive
+        // "$base/v1/messages" probe would double the path (…/v1/v1/messages)
+        // and reject working endpoints with a false 404. Probe every candidate
+        // path the runtime could end up using and accept the first one the
+        // provider actually answers with a protocol response (not 404).
+        var authRejected = false
+        var lastCode = 0
+        var lastBody = ""
+        var lastError: String? = null
+        var modelRejected = false
+        for (endpoint in messagesEndpointCandidates(baseUrl, protocol)) {
+            val response = request(endpoint, "POST", apiKey, body, protocol, connectTimeoutMs = 8_000, readTimeoutMs = 10_000)
+            when {
+                response.code in 200..299 -> return@withContext ConnectionValidation.Success(
+                    if (protocol == ProviderProtocol.ANTHROPIC || protocol == ProviderProtocol.ANTHROPIC_GATEWAY || protocol == ProviderProtocol.OPENROUTER) {
+                        "Anthropic Messages endpoint verified. Claude Code settings are ready."
+                    } else {
+                        "Connection successful. Claude Code settings are ready."
+                    },
+                )
+                response.code == 401 || response.code == 403 -> authRejected = true
+                response.code == 400 && response.body.contains("model", ignoreCase = true) -> modelRejected = true
+                response.code == 404 -> Unit
+                response.code > 0 -> {
+                    lastCode = response.code
+                    lastBody = response.body
+                }
+                response.error != null -> lastError = response.error
+            }
+        }
         when {
-            response.code in 200..299 -> ConnectionValidation.Success(
-                if (protocol == ProviderProtocol.ANTHROPIC || protocol == ProviderProtocol.ANTHROPIC_GATEWAY || protocol == ProviderProtocol.OPENROUTER) {
-                    "Anthropic Messages endpoint verified. Claude Code settings are ready."
-                } else {
-                    "Connection successful. Claude Code settings are ready."
-                },
-            )
-            response.code == 401 || response.code == 403 -> ConnectionValidation.Failure("The API key was rejected.")
-            response.code == 404 -> ConnectionValidation.Failure("The API endpoint was not found. Check the base URL.")
-            response.code == 400 && response.body.contains("model", ignoreCase = true) ->
-                ConnectionValidation.Failure("The provider did not accept model '$model'. Choose a listed model or check its exact name.")
-            response.code > 0 -> ConnectionValidation.Failure(friendlyHttpError(response.code))
-            response.error?.contains("timed out", ignoreCase = true) == true ->
+            authRejected -> ConnectionValidation.Failure("The API key was rejected.")
+            modelRejected -> ConnectionValidation.Failure("The provider did not accept model '$model'. Choose a listed model or check its exact name.")
+            lastCode == 404 -> ConnectionValidation.Failure("The API endpoint was not found. Check the base URL.")
+            lastCode > 0 -> ConnectionValidation.Failure(friendlyHttpError(lastCode, lastBody))
+            lastError?.contains("timed out", ignoreCase = true) == true ->
                 ConnectionValidation.Failure("Connection timed out after 10 seconds.")
-            else -> ConnectionValidation.Failure(response.error ?: "Could not connect to the provider.")
+            else -> ConnectionValidation.Failure(lastError ?: "Could not connect to the provider.")
         }
     }
 
@@ -117,19 +138,39 @@ class ProviderApiClient {
         val withoutAnthropic = base.removeSuffix("/anthropic")
         val candidates = when (protocol) {
             ProviderProtocol.OPENROUTER -> listOf("$base/v1/models")
-            ProviderProtocol.OPENAI_CHAT, ProviderProtocol.OPENAI_RESPONSES -> listOf("$base/models")
+            ProviderProtocol.OPENAI_CHAT, ProviderProtocol.OPENAI_RESPONSES -> buildList {
+                add("$base/models")
+                if (!base.endsWith("/v1")) add("$base/v1/models")
+            }
             else -> listOf("$base/v1/models", "$base/models", "$withoutAnthropic/models", "$withoutAnthropic/v1/models")
         }
         return candidates.distinct()
     }
 
-    private fun messagesEndpoint(baseUrl: String, protocol: ProviderProtocol): String {
+    /**
+     * Candidate chat endpoints for validation, ordered from most to least
+     * likely. Mirrors modelEndpoints() so providers whose base URL already
+     * contains /v1 or /anthropic are probed without a doubled path segment.
+     */
+    private fun messagesEndpointCandidates(baseUrl: String, protocol: ProviderProtocol): List<String> {
         val base = baseUrl.trim().trimEnd('/')
         return when (protocol) {
-            ProviderProtocol.OPENROUTER -> "$base/v1/messages"
-            ProviderProtocol.OPENAI_CHAT -> "$base/chat/completions"
-            ProviderProtocol.OPENAI_RESPONSES -> "$base/responses"
-            else -> "$base/v1/messages"
+            ProviderProtocol.OPENROUTER -> listOf("$base/v1/messages")
+            ProviderProtocol.OPENAI_CHAT -> listOf("$base/chat/completions")
+            ProviderProtocol.OPENAI_RESPONSES -> listOf("$base/responses")
+            else -> {
+                val withoutAnthropic = base.removeSuffix("/anthropic")
+                buildList {
+                    // Bases that already end in /v1 take /messages directly;
+                    // appending /v1/messages again would double the segment.
+                    add("$base/messages")
+                    if (!base.endsWith("/v1")) add("$base/v1/messages")
+                    if (withoutAnthropic != base) {
+                        if (!withoutAnthropic.endsWith("/v1")) add("$withoutAnthropic/v1/messages")
+                        add("$withoutAnthropic/messages")
+                    }
+                }.distinct()
+            }
         }
     }
 
@@ -151,10 +192,18 @@ class ProviderApiClient {
             .toString()
     }
 
-    private fun friendlyHttpError(code: Int): String = when (code) {
-        429 -> "The provider rate limit was reached. Wait a moment and try again."
-        in 500..599 -> "The provider is temporarily unavailable (HTTP $code)."
-        else -> "The provider returned HTTP $code. Check the URL and account access."
+    private fun friendlyHttpError(code: Int, body: String = ""): String {
+        // Surface provider-supplied detail (e.g. quota, invalid model) so users
+        // no longer see a generic HTTP code for well-known API errors.
+        val detail = runCatching {
+            (JSONObject(body).optJSONObject("error") as? JSONObject)?.optString("message").orEmpty()
+        }.getOrNull().orEmpty().ifBlank { body.take(200) }
+        val base = when (code) {
+            429 -> "The provider rate limit was reached. Wait a moment and try again."
+            in 500..599 -> "The provider is temporarily unavailable (HTTP $code)."
+            else -> "The provider returned HTTP $code. Check the URL and account access."
+        }
+        return if (detail.isBlank()) base else "$base Detail: $detail"
     }
 
     private data class HttpResult(val code: Int, val body: String, val error: String? = null)
