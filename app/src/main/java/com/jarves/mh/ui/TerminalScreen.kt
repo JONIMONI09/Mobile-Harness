@@ -22,6 +22,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,6 +42,8 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -107,6 +114,9 @@ fun TerminalScreen(
     showThemeAction: Boolean = false,
     showQuickCommands: Boolean = true,
     compactHeader: Boolean = false,
+    errorState: String? = null,
+    onErrorDismiss: (() -> Unit)? = null,
+    onSilentCommand: ((String) -> Unit)? = null,
 ) {
     var commandInput by remember { mutableStateOf(TextFieldValue()) }
     var commandHistory by remember { mutableStateOf(emptyList<String>()) }
@@ -128,7 +138,9 @@ fun TerminalScreen(
     val submitCommand = {
         if (commandInput.text.isNotBlank()) {
             val submitted = commandInput.text
-            if (isRunning) {
+            if (submitted.trim() == "/compact" && onSilentCommand != null) {
+                onSilentCommand(submitted.trim())
+            } else if (isRunning) {
                 onInput(submitted)
             } else {
                 onRun(submitted)
@@ -154,8 +166,8 @@ fun TerminalScreen(
                 terminalScrollState.scrollTo(maxValue)
             }
     }
-    // Also trigger scroll when key state changes (e.g. isRunning toggling)
-    LaunchedEffect(lines.size, isRunning, commandInput.text.length) {
+    // Also trigger scroll when key state changes (e.g. isRunning toggling, error appearance)
+    LaunchedEffect(lines.size, isRunning, commandInput.text.length, errorState) {
         delay(100)
         terminalScrollState.scrollTo(terminalScrollState.maxValue)
     }
@@ -385,6 +397,49 @@ fun TerminalScreen(
                             }
                         }
 
+                        if (!errorState.isNullOrBlank()) {
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 4.dp, vertical = 6.dp)
+                                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.errorContainer,
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Icon(
+                                        Icons.Default.Warning,
+                                        contentDescription = "Backup Error",
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(16.dp),
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        text = errorState,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    if (onErrorDismiss != null) {
+                                        IconButton(
+                                            onClick = onErrorDismiss,
+                                            modifier = Modifier.size(20.dp),
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Close,
+                                                contentDescription = "Dismiss error",
+                                                tint = MaterialTheme.colorScheme.onErrorContainer,
+                                                modifier = Modifier.size(14.dp),
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         BasicTextField(
                             value = commandInput,
                             onValueChange = { next ->
@@ -432,6 +487,51 @@ fun TerminalScreen(
                         )
                     }
                     Spacer(Modifier.height(24.dp))
+                }
+            }
+
+            val isSlashCommand = commandInput.text.startsWith("/")
+            if (isSlashCommand) {
+                val slashSuggestions = listOf(
+                    "/compact",
+                    "/clear",
+                    "/help",
+                    "/cost",
+                    "/doctor",
+                    "/config",
+                    "/review",
+                )
+                val matchingSuggestions = slashSuggestions.filter {
+                    it.startsWith(commandInput.text, ignoreCase = true)
+                }.ifEmpty { slashSuggestions }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 14.dp, vertical = 4.dp)
+                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    matchingSuggestions.forEach { suggestion ->
+                        AssistChip(
+                            onClick = {
+                                if (suggestion == "/compact" && onSilentCommand != null) {
+                                    onSilentCommand(suggestion)
+                                    commandInput = TextFieldValue()
+                                } else {
+                                    commandInput = TextFieldValue(suggestion, TextRange(suggestion.length))
+                                }
+                            },
+                            label = {
+                                Text(
+                                    suggestion,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 11.sp,
+                                )
+                            },
+                        )
+                    }
                 }
             }
 

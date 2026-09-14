@@ -202,6 +202,7 @@ dependencies {
     implementation("org.apache.commons:commons-compress:1.27.1")
     implementation("com.github.luben:zstd-jni:1.5.7-3@aar")
     implementation("androidx.graphics:graphics-path:1.1.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20250107")

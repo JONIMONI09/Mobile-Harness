@@ -78,6 +78,7 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Download
@@ -214,6 +215,7 @@ private enum class WorkspaceTab(val label: String, val icon: ImageVector) {
     TERMINAL("Terminal", Icons.Default.Terminal),
     CHANGES("Changes", Icons.Default.Code),
     PREVIEW("Preview", Icons.Default.Preview),
+    DASHBOARD("Dashboard", Icons.Default.Dashboard),
 }
 
 @Composable
@@ -307,6 +309,9 @@ fun PocketDevApp(viewModel: MainViewModel = viewModel()) {
             onRemoveAttachment = viewModel::removePendingAttachment,
             onOpenAttachment = viewModel::openChatAttachment,
             onBuildAndRunAndroid = viewModel::buildAndRunAndroidApp,
+            gitHubToken = viewModel.getGitHubToken(),
+            onSilentCommand = viewModel::executeSilentCommand,
+            onClearBackupError = viewModel::clearBackupError,
         )
         else -> RootScreenHost(state, viewModel, projectsListState)
     }
@@ -1522,6 +1527,9 @@ private fun RootScreenHost(
                     themeMode = state.themeMode,
                     liveOutput = terminalLiveOutput,
                     currentCommand = terminalCurrentCommand,
+                    errorState = state.backupErrorState,
+                    onErrorDismiss = viewModel::clearBackupError,
+                    onSilentCommand = viewModel::executeSilentCommand,
                 )
                 RootScreen.SETTINGS -> SettingsScreen(
                     state = state,
@@ -2547,6 +2555,9 @@ private fun WorkspaceScreen(
     onRemoveAttachment: (String) -> Unit,
     onOpenAttachment: (ChatAttachment) -> Unit,
     onBuildAndRunAndroid: () -> Unit,
+    gitHubToken: String? = null,
+    onSilentCommand: ((String) -> Unit)? = null,
+    onClearBackupError: (() -> Unit)? = null,
 ) {
     BackHandler(onBack = onBack)
     val context = LocalContext.current
@@ -2805,6 +2816,9 @@ private fun WorkspaceScreen(
                     showThemeAction = false,
                     showQuickCommands = false,
                     compactHeader = true,
+                    errorState = state.backupErrorState,
+                    onErrorDismiss = onClearBackupError,
+                    onSilentCommand = onSilentCommand,
                 )
                 WorkspaceTab.CHANGES -> ChangesTab(
                     state.changes,
@@ -2814,6 +2828,10 @@ private fun WorkspaceScreen(
                     onKeepFileChange,
                 )
                 WorkspaceTab.PREVIEW -> PreviewTab(state.previewReady, state.previewUrl)
+                WorkspaceTab.DASHBOARD -> GitHubDevDashboardScreen(
+                    token = gitHubToken,
+                    defaultRepo = state.activeProject?.slug?.let { if (it.contains("/")) it else "techjarves/$it" } ?: "techjarves/Mobile-Harness",
+                )
             }
         }
     }

@@ -25,6 +25,7 @@ interface RuntimeBridge {
     suspend fun loadPendingChanges(projectId: String): List<ChangeItem>
     suspend fun undoFileChange(projectId: String, path: String): Boolean
     suspend fun acceptFileChange(projectId: String, path: String): Boolean
+    suspend fun executeSilentCommand(command: String): Boolean
 }
 
 object RuntimeLaunchConfigBuilder {

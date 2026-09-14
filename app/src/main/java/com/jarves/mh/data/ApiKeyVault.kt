@@ -10,11 +10,18 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-class ApiKeyVault(context: Context) {
+interface SecretStore {
+    fun put(providerId: String, secret: String)
+    fun contains(providerId: String): Boolean
+    fun remove(providerId: String)
+    fun get(providerId: String): String?
+}
+
+class ApiKeyVault(context: Context) : SecretStore {
     private val preferences = context.getSharedPreferences("pocket_secrets", Context.MODE_PRIVATE)
     private val alias = "pocket-provider-key"
 
-    fun put(providerId: String, secret: String) {
+    override fun put(providerId: String, secret: String) {
         if (secret.isBlank()) return
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
@@ -25,16 +32,16 @@ class ApiKeyVault(context: Context) {
             .apply()
     }
 
-    fun contains(providerId: String): Boolean = preferences.contains("$providerId.value")
+    override fun contains(providerId: String): Boolean = preferences.contains("$providerId.value")
 
-    fun remove(providerId: String) {
+    override fun remove(providerId: String) {
         preferences.edit()
             .remove("$providerId.iv")
             .remove("$providerId.value")
             .apply()
     }
 
-    fun get(providerId: String): String? = runCatching {
+    override fun get(providerId: String): String? = runCatching {
         val iv = Base64.decode(preferences.getString("$providerId.iv", null), Base64.NO_WRAP)
         val encrypted = Base64.decode(preferences.getString("$providerId.value", null), Base64.NO_WRAP)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")

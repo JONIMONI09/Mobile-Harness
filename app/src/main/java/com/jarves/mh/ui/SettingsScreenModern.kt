@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -30,8 +31,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -60,18 +64,24 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import com.jarves.mh.data.CustomSkillItem
+import com.jarves.mh.data.McpSkillManager
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -94,7 +104,7 @@ import com.jarves.mh.ui.theme.AppThemeMode
 import com.jarves.mh.ui.theme.PocketOrange
 import kotlinx.coroutines.launch
 
-private enum class SettingsSection { CONNECTION, APPEARANCE, TOOLS, RUNTIME, UPDATE_CHANNEL }
+private enum class SettingsSection { CONNECTION, APPEARANCE, TOOLS, RUNTIME, UPDATE_CHANNEL, MCP_SKILLS }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -421,6 +431,22 @@ fun SettingsScreen(
                 }
             }
 
+            item {
+                SettingsAccordion(
+                    title = "MCP & Custom Skills",
+                    subtitle = "Configure .mcp.json and .claude/commands",
+                    icon = Icons.Default.Build,
+                    expanded = expanded == SettingsSection.MCP_SKILLS,
+                    onClick = { toggle(SettingsSection.MCP_SKILLS) },
+                ) {
+                    McpAndCustomSkillsSection(
+                        context = context,
+                        projectId = state.activeProject?.id,
+                        rootPath = state.activeProject?.rootPath,
+                    )
+                }
+            }
+
             if (BuildConfig.DEBUG) {
                 item {
                     DebugUpdateChannelSection(
@@ -724,6 +750,253 @@ private fun DebugUpdateChannelSection(
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+@Composable
+private fun McpAndCustomSkillsSection(
+    context: android.content.Context,
+    projectId: String?,
+    rootPath: String? = null,
+) {
+    val scope = rememberCoroutineScope()
+    val workspaceDir = remember(projectId, rootPath) { McpSkillManager.resolveWorkspaceDir(context, projectId, rootPath) }
+    var selectedSubTab by rememberSaveable { mutableIntStateOf(0) }
+
+    // MCP Config state
+    var mcpConfigText by remember { mutableStateOf("") }
+    var mcpSaveStatus by remember { mutableStateOf<String?>(null) }
+    var mcpStatusOk by remember { mutableStateOf(true) }
+
+    // Skills state
+    var skillsList by remember { mutableStateOf<List<CustomSkillItem>>(emptyList()) }
+    var skillNameInput by remember { mutableStateOf("") }
+    var skillContentInput by remember { mutableStateOf("") }
+    var skillStatus by remember { mutableStateOf<String?>(null) }
+    var isEditingSkill by remember { mutableStateOf(false) }
+
+    fun refreshMcp() {
+        scope.launch {
+            mcpConfigText = McpSkillManager.readMcpConfig(workspaceDir)
+        }
+    }
+
+    fun refreshSkills() {
+        scope.launch {
+            skillsList = McpSkillManager.listSkills(workspaceDir)
+        }
+    }
+
+    LaunchedEffect(workspaceDir) {
+        refreshMcp()
+        refreshSkills()
+    }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        TabRow(selectedTabIndex = selectedSubTab) {
+            Tab(
+                selected = selectedSubTab == 0,
+                onClick = { selectedSubTab = 0 },
+                text = { Text(".mcp.json") },
+            )
+            Tab(
+                selected = selectedSubTab == 1,
+                onClick = { selectedSubTab = 1 },
+                text = { Text("Skills (${skillsList.size})") },
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        if (selectedSubTab == 0) {
+            Text(
+                "Configure Model Context Protocol (MCP) servers in PRoot. Read, write, and execute permissions are explicitly granted.",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = mcpConfigText,
+                onValueChange = { mcpConfigText = it; mcpSaveStatus = null },
+                label = { Text(".mcp.json configuration") },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp, max = 280.dp),
+                textStyle = androidx.compose.ui.text.TextStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, fontSize = 12.sp),
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            val ok = McpSkillManager.saveMcpConfig(workspaceDir, mcpConfigText)
+                            if (ok) {
+                                mcpSaveStatus = "Saved .mcp.json with full rwx permissions"
+                                mcpStatusOk = true
+                                refreshMcp()
+                            } else {
+                                mcpSaveStatus = "Invalid JSON or failed to write file"
+                                mcpStatusOk = false
+                            }
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("Save .mcp.json")
+                }
+                OutlinedButton(
+                    onClick = {
+                        mcpConfigText = "{\n  \"mcpServers\": {\n    \"memory\": {\n      \"command\": \"npx\",\n      \"args\": [\"-y\", \"@modelcontextprotocol/server-memory\"]\n    }\n  }\n}"
+                    },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("Sample MCP")
+                }
+            }
+            mcpSaveStatus?.let { msg ->
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = msg,
+                    fontSize = 12.sp,
+                    color = if (mcpStatusOk) Color(0xFF22C55E) else MaterialTheme.colorScheme.error,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+        } else {
+            Text(
+                "Custom slash commands stored in .claude/commands/*.md. Invokable in Claude Code sessions.",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(8.dp))
+
+            if (!isEditingSkill) {
+                Button(
+                    onClick = {
+                        skillNameInput = ""
+                        skillContentInput = ""
+                        isEditingSkill = true
+                        skillStatus = null
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("New Custom Skill")
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                if (skillsList.isEmpty()) {
+                    Text(
+                        "No custom skills configured yet. Tap 'New Custom Skill' to create one.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    )
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        skillsList.forEach { skill ->
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text("/${skill.name}", fontWeight = FontWeight.Bold, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                                        Text(
+                                            skill.content.take(60).replace("\n", " "),
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            skillNameInput = skill.name
+                                            skillContentInput = skill.content
+                                            isEditingSkill = true
+                                            skillStatus = null
+                                        },
+                                        modifier = Modifier.size(28.dp),
+                                    ) {
+                                        Icon(Icons.Default.Tune, "Edit", modifier = Modifier.size(16.dp))
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            scope.launch {
+                                                McpSkillManager.deleteSkill(workspaceDir, skill.name)
+                                                refreshSkills()
+                                            }
+                                        },
+                                        modifier = Modifier.size(28.dp),
+                                    ) {
+                                        Icon(Icons.Default.Delete, "Delete", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                OutlinedTextField(
+                    value = skillNameInput,
+                    onValueChange = { skillNameInput = it.removePrefix("/") },
+                    label = { Text("Skill name (e.g., test-runner)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = skillContentInput,
+                    onValueChange = { skillContentInput = it },
+                    label = { Text("Prompt instructions (.md)") },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp, max = 220.dp),
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Button(
+                        onClick = {
+                            if (skillNameInput.isNotBlank()) {
+                                scope.launch {
+                                    val ok = McpSkillManager.saveSkill(workspaceDir, skillNameInput, skillContentInput)
+                                    if (ok) {
+                                        isEditingSkill = false
+                                        refreshSkills()
+                                    } else {
+                                        skillStatus = "Failed to save skill file."
+                                    }
+                                }
+                            }
+                        },
+                        enabled = skillNameInput.isNotBlank(),
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text("Save Skill")
+                    }
+                    OutlinedButton(
+                        onClick = { isEditingSkill = false },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+                skillStatus?.let {
+                    Spacer(Modifier.height(4.dp))
+                    Text(it, color = MaterialTheme.colorScheme.error, fontSize = 11.sp)
+                }
+            }
         }
     }
 }

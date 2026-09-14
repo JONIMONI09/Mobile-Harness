@@ -13,6 +13,8 @@ import androidx.core.content.FileProvider
 import com.jarves.mh.BuildConfig
 import com.jarves.mh.data.ApiKeyVault
 import com.jarves.mh.data.AppPreferences
+import com.jarves.mh.data.GitHubAuthManager
+import com.jarves.mh.data.MessageBackupManager
 import com.jarves.mh.model.ActivityItem
 import com.jarves.mh.model.ChangeItem
 import com.jarves.mh.model.ChatMessage
@@ -154,11 +156,14 @@ data class AppUiState(
     val appUpdateDownloadedBytes: Long = 0L,
     val appUpdateTotalBytes: Long = -1L,
     val appUpdateError: String? = null,
+    val backupErrorState: String? = null,
+    val isGitHubAuthenticated: Boolean = false,
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val vault = ApiKeyVault(application)
     private val preferences = AppPreferences(application)
+    private val gitHubAuthManager = GitHubAuthManager(vault)
     private val runtime = ClaudeRuntimeBridge(application) { profile -> vault.get(profile.kind.name) }
     private val installer = RuntimeInstaller(application)
     private val providerApi = ProviderApiClient()
@@ -182,6 +187,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             selectedDevStacks = preferences.selectedDevStacks.mapNotNull { name ->
                 runCatching { DevStack.valueOf(name) }.getOrNull()
             }.toSet() + DevStack.WEB,
+            isGitHubAuthenticated = gitHubAuthManager.hasToken(),
         ),
     )
 
@@ -732,7 +738,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return workspace.walkTopDown()
             .maxDepth(4)
             .filter { it.isFile && it.name in settingsNames }
-            .map(File::getParentFile)
+            .mapNotNull { it.parentFile }
             .sortedBy { it.absolutePath.length }
             .firstOrNull { root ->
                 root.walkTopDown()
@@ -1703,39 +1709,119 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val attachments = state.value.pendingAttachments
         if ((prompt.isBlank() && attachments.isEmpty()) || state.value.isRunning) return
         val requestText = prompt.trim().ifBlank { "Please review the attached files." }
-        updateActiveChatTitle(requestText)
-        _state.update {
-            val startedAt = System.currentTimeMillis()
-            it.copy(
-                messages = it.messages + ChatMessage(fromUser = true, text = prompt.trim(), attachments = attachments),
-                pendingAttachments = emptyList(),
-                isRunning = true,
-                activity = listOf(ActivityItem("Understanding your request", "Preparing a safe plan", false)) + it.activity,
-                liveProcess = listOf(ActivityItem("Think", requestPlanningSummary(requestText), false)),
-                liveThinking = true,
-                activeThinkingBlockId = null,
-                taskStartedAtMillis = startedAt,
-                taskFinishedAtMillis = null,
-                workSegmentStartedAtMillis = startedAt,
-                currentTaskRequest = requestText,
-            )
-        }
-        touchProject(project.id)
-        persistMessages()
-        val history = state.value.messages // includes all messages up to now
-        val runtimePrompt = if (attachments.isEmpty()) requestText else buildString {
-            appendLine(requestText)
-            appendLine()
-            appendLine("<attached_files>")
-            attachments.forEach { attachment ->
-                appendLine("- ${attachment.displayName}: ${projectGuestRoot(project)}/${attachment.relativePath} (${attachment.mimeType})")
-            }
-            appendLine("These files were explicitly attached by the user. Inspect them only as needed for the request.")
-            appendLine("</attached_files>")
-        }
+
         viewModelScope.launch {
+            val backedUp = MessageBackupManager.backupMessageBeforeSend(getApplication(), requestText)
+            if (!backedUp) {
+                _state.update { it.copy(backupErrorState = "Backup failed: unable to record message locally. Execution halted.") }
+                return@launch
+            }
+            _state.update { it.copy(backupErrorState = null) }
+
+            updateActiveChatTitle(requestText)
+            _state.update {
+                val startedAt = System.currentTimeMillis()
+                it.copy(
+                    messages = it.messages + ChatMessage(fromUser = true, text = prompt.trim(), attachments = attachments),
+                    pendingAttachments = emptyList(),
+                    isRunning = true,
+                    activity = listOf(ActivityItem("Understanding your request", "Preparing a safe plan", false)) + it.activity,
+                    liveProcess = listOf(ActivityItem("Think", requestPlanningSummary(requestText), false)),
+                    liveThinking = true,
+                    activeThinkingBlockId = null,
+                    taskStartedAtMillis = startedAt,
+                    taskFinishedAtMillis = null,
+                    workSegmentStartedAtMillis = startedAt,
+                    currentTaskRequest = requestText,
+                )
+            }
+            touchProject(project.id)
+            persistMessages()
+            val history = state.value.messages // includes all messages up to now
+            val runtimePrompt = if (attachments.isEmpty()) requestText else buildString {
+                appendLine(requestText)
+                appendLine()
+                appendLine("<attached_files>")
+                attachments.forEach { attachment ->
+                    appendLine("- ${attachment.displayName}: ${projectGuestRoot(project)}/${attachment.relativePath} (${attachment.mimeType})")
+                }
+                appendLine("These files were explicitly attached by the user. Inspect them only as needed for the request.")
+                appendLine("</attached_files>")
+            }
             runtime.startSession(project.id, project.slug, project.kind, runtimePrompt, history, state.value.provider)
         }
+    }
+
+    fun executeSilentCommand(command: String) {
+        viewModelScope.launch {
+            runtime.executeSilentCommand(command)
+        }
+    }
+
+    @Volatile private var lastHandledAuthUri: String? = null
+
+    fun handleAuthIntent(intent: Intent?) {
+        val uri = intent?.data ?: return
+        if (uri.scheme == "mobileharness" && uri.host == "github-callback") {
+            val uriString = uri.toString()
+            if (uriString == lastHandledAuthUri) return
+            lastHandledAuthUri = uriString
+
+            val errorParam = uri.getQueryParameter("error_description") ?: uri.getQueryParameter("error")
+            if (!errorParam.isNullOrBlank()) {
+                _state.update { it.copy(toastMessage = "GitHub OAuth error: $errorParam") }
+                return
+            }
+
+            val token = uri.getQueryParameter("token")
+            val code = uri.getQueryParameter("code")
+            val clientIdParam = uri.getQueryParameter("client_id")
+            val clientSecretParam = uri.getQueryParameter("client_secret")
+
+            if (!token.isNullOrBlank()) {
+                gitHubAuthManager.saveToken(token)
+                _state.update { it.copy(isGitHubAuthenticated = true, toastMessage = "GitHub authenticated successfully") }
+            } else if (!code.isNullOrBlank()) {
+                viewModelScope.launch {
+                    val result = gitHubAuthManager.exchangeCodeForToken(
+                        code = code,
+                        clientId = clientIdParam ?: gitHubAuthManager.getClientId(),
+                        clientSecret = clientSecretParam ?: gitHubAuthManager.getClientSecret(),
+                    )
+                    if (result.isSuccess) {
+                        _state.update { it.copy(isGitHubAuthenticated = true, toastMessage = "GitHub authenticated successfully") }
+                    } else {
+                        _state.update { it.copy(toastMessage = "GitHub OAuth exchange failed: ${result.exceptionOrNull()?.message}") }
+                    }
+                }
+            }
+        }
+    }
+
+    fun saveGitHubOAuthCredentials(clientId: String, clientSecret: String) {
+        gitHubAuthManager.saveOAuthCredentials(clientId, clientSecret)
+    }
+
+    fun getGitHubClientId(): String = gitHubAuthManager.getClientId()
+
+    fun getGitHubClientSecret(): String = gitHubAuthManager.getClientSecret()
+
+    fun getGitHubToken(): String? = gitHubAuthManager.getSavedToken()
+
+    fun saveGitHubToken(token: String) {
+        gitHubAuthManager.saveToken(token)
+        _state.update { it.copy(isGitHubAuthenticated = true, toastMessage = "GitHub token saved") }
+    }
+
+    fun getGitHubOAuthAuthorizeUrl(): String? = gitHubAuthManager.buildOAuthAuthorizeUrl()
+
+    fun clearGitHubAuth() {
+        gitHubAuthManager.clearToken()
+        _state.update { it.copy(isGitHubAuthenticated = false, toastMessage = "GitHub token cleared") }
+    }
+
+    fun clearBackupError() {
+        _state.update { it.copy(backupErrorState = null) }
     }
 
     fun answerApproval(approved: Boolean) {

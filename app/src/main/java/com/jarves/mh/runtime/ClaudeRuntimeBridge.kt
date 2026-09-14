@@ -354,6 +354,36 @@ class ClaudeRuntimeBridge(
         true
     }
 
+    override suspend fun executeSilentCommand(command: String): Boolean = withContext(Dispatchers.IO) {
+        val trimmed = command.trim()
+        val running = activeProcess
+        if (running != null && running.isAlive) {
+            return@withContext runCatching {
+                running.outputStream.write((trimmed + "\n").toByteArray())
+                running.outputStream.flush()
+                true
+            }.getOrDefault(false)
+        }
+        // Claude slash commands (like /compact) require an active interactive Claude session
+        if (trimmed.startsWith("/")) {
+            return@withContext false
+        }
+        runCatching {
+            if (!installer.isInstalled()) return@runCatching false
+            val installed = installer.installedRuntime()
+            val workspace = File(context.filesDir, "workspaces/terminal").apply { mkdirs() }
+            val proc = installer.process(
+                proot = installed.proot,
+                rootfs = installed.rootfs,
+                workspace = workspace,
+                environment = emptyMap(),
+                guestCommand = listOf("/usr/bin/bash", "-c", trimmed),
+            )
+            proc.waitFor()
+            true
+        }.getOrDefault(false)
+    }
+
     private suspend fun watchPermissionRequests(sessionId: String) {
         val bridge = File(context.filesDir, "runtime-bridge")
         while (kotlin.coroutines.coroutineContext.isActive) {
