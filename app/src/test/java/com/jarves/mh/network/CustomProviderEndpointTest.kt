@@ -51,7 +51,7 @@ class CustomProviderEndpointTest {
         ) as List<*>
 
         assertTrue(candidates.contains("https://my-gateway.example/zen/v1/messages"))
-        assertTrue(candidates.first() == "https://my-gateway.example/zen/messages")
+        assertTrue(candidates.last() == "https://my-gateway.example/zen/messages")
     }
 
     @Test
