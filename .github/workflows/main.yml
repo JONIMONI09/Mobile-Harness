@@ -65,18 +65,40 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      # C++ Cache für den extremen Speed-Boost beim 2. Durchlauf
+      - name: Cache C++ Build Outputs
+        uses: actions/cache@v4
+        with:
+          path: app/.cxx
+          key: cxx-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            cxx-${{ runner.os }}-
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
         working-directory: .
 
+      # Speed-Optimierung: Paralleles Bauen, Caching und massig RAM freigegeben
       - name: Build release APKs
-        run: ./gradlew assembleOfflineRelease assembleOnlineRelease --no-daemon --stacktrace
+        run: ./gradlew assembleOfflineRelease assembleOnlineRelease --parallel --build-cache --no-daemon --stacktrace -Porg.gradle.jvmargs="-Xmx6g -XX:+UseParallelGC -Dfile.encoding=UTF-8"
 
-      - name: Prepare release assets
+      # Signiert die APKs direkt mit dem Android-Debug-Schlüssel, damit die Installation klappt
+      - name: Sign APKs & Prepare release assets
         run: |
           mkdir -p release-assets
-          cp app/build/outputs/apk/offline/release/app-offline-release-unsigned.apk release-assets/Mobile-Harness-offline.apk
-          cp app/build/outputs/apk/online/release/app-online-release-unsigned.apk release-assets/Mobile-Harness-online.apk
+
+          # Debug Keystore generieren für gültige Signatur
+          keytool -genkey -v -keystore release.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
+
+          # Neuesten Android apksigner suchen
+          APKSIGNER=$(find $ANDROID_HOME/build-tools -name apksigner | sort -V | tail -n 1)
+
+          # Offline APK signieren
+          $APKSIGNER sign --ks release.keystore --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --out release-assets/Mobile-Harness-offline.apk app/build/outputs/apk/offline/release/app-offline-release-unsigned.apk
+
+          # Online APK signieren
+          $APKSIGNER sign --ks release.keystore --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --out release-assets/Mobile-Harness-online.apk app/build/outputs/apk/online/release/app-online-release-unsigned.apk
+
           ls -lh release-assets/
 
       - name: Create GitHub Release (PRIMARY)
