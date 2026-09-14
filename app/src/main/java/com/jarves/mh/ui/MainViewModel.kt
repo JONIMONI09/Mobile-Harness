@@ -320,6 +320,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 proc.outputStream.flush()
                                 autoConfirmed = true
                             }
+                        } else {
+                            Thread.sleep(50)
                         }
                     }
                     val exit = proc.waitFor()
@@ -534,6 +536,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         )
                     } else current
                 }
+            } else {
+                Thread.sleep(50)
             }
         }
         val exitCode = process.waitFor()

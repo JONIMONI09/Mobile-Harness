@@ -207,6 +207,8 @@ class ClaudeRuntimeBridge(
                             }
                             newline = pendingOutput.indexOf("\n")
                         }
+                    } else {
+                        delay(50)
                     }
                 }
                 pendingOutput.toString().trim().takeIf(String::isNotBlank)?.let { line ->

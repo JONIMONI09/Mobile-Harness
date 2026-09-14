@@ -310,6 +310,13 @@ fun PocketDevApp(viewModel: MainViewModel = viewModel()) {
             onOpenAttachment = viewModel::openChatAttachment,
             onBuildAndRunAndroid = viewModel::buildAndRunAndroidApp,
             gitHubToken = viewModel.getGitHubToken(),
+            onSaveGitHubOAuthCredentials = viewModel::saveGitHubOAuthCredentials,
+            onGitHubTokenChanged = { token ->
+                if (token != null) viewModel.saveGitHubToken(token) else viewModel.clearGitHubAuth()
+            },
+            getGitHubOAuthCredentials = {
+                Pair(viewModel.getGitHubClientId(), viewModel.getGitHubClientSecret())
+            },
             onSilentCommand = viewModel::executeSilentCommand,
             onClearBackupError = viewModel::clearBackupError,
         )
@@ -2556,6 +2563,9 @@ private fun WorkspaceScreen(
     onOpenAttachment: (ChatAttachment) -> Unit,
     onBuildAndRunAndroid: () -> Unit,
     gitHubToken: String? = null,
+    onSaveGitHubOAuthCredentials: ((String, String) -> Unit)? = null,
+    onGitHubTokenChanged: ((String?) -> Unit)? = null,
+    getGitHubOAuthCredentials: (() -> Pair<String, String>)? = null,
     onSilentCommand: ((String) -> Unit)? = null,
     onClearBackupError: (() -> Unit)? = null,
 ) {
