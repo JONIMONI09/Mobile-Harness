@@ -35,8 +35,11 @@ jobs:
       - name: Build Release APKs
         run: ./gradlew assembleOfflineRelease assembleOnlineRelease
 
-      - name: Inspect outputs
-        run: find app/build/outputs -type f | sort
+      - name: Verify unsigned release APKs exist
+        run: |
+          find app/build/outputs -type f | sort
+          test -f app/build/outputs/apk/offline/release/app-offline-release-unsigned.apk
+          test -f app/build/outputs/apk/online/release/app-online-release-unsigned.apk
 
   release:
     name: Create Release
@@ -45,11 +48,6 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: write
-    env:
-      MH_UPLOAD_STORE_FILE: ${{ secrets.MH_UPLOAD_STORE_FILE }}
-      MH_UPLOAD_STORE_PASSWORD: ${{ secrets.MH_UPLOAD_STORE_PASSWORD }}
-      MH_UPLOAD_KEY_ALIAS: ${{ secrets.MH_UPLOAD_KEY_ALIAS }}
-      MH_UPLOAD_KEY_PASSWORD: ${{ secrets.MH_UPLOAD_KEY_PASSWORD }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -66,18 +64,13 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Signed Release APKs
+      - name: Build Release APKs
         run: ./gradlew assembleOfflineRelease assembleOnlineRelease
-
-      - name: Verify signed release APKs exist
-        run: |
-          test -f app/build/outputs/apk/offline/release/app-offline-release.apk
-          test -f app/build/outputs/apk/online/release/app-online-release.apk
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            app/build/outputs/apk/offline/release/app-offline-release.apk
-            app/build/outputs/apk/online/release/app-online-release.apk
+            app/build/outputs/apk/offline/release/app-offline-release-unsigned.apk
+            app/build/outputs/apk/online/release/app-online-release-unsigned.apk
           generate_release_notes: true
