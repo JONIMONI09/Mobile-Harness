@@ -39,7 +39,7 @@ object RuntimeLaunchConfigBuilder {
      */
     private fun normalizeAnthropicBaseUrl(raw: String): String {
         val base = raw.trim().trimEnd('/')
-        return if (base.endsWith("/v1")) base.removeSuffix("/v1").trimEnd('/') else base
+        return if (base.endsWith("/v1")) base.substring(0, base.length - "/v1".length).trimEnd('/') else base
     }
 
     fun build(profile: ProviderProfile, authToken: String? = null, localGatewayUrl: String? = null): RuntimeLaunchConfig {
