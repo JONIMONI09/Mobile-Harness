@@ -13,6 +13,16 @@ val testSecrets = Properties().apply {
 }
 val playBuild = providers.gradleProperty("playBuild").orNull?.toBoolean() == true ||
     providers.gradleProperty("playFeasibility").orNull?.toBoolean() == true
+// Fall back to any installed NDK when the pinned one is missing so local
+// builds work without downloading a second toolchain.
+val resolvedNdkVersion: String = providers.gradleProperty("mhNdkVersion").orNull ?: kotlin.run {
+    val pinned = "28.2.13676358"
+    val ndkRoot = providers.environmentVariable("ANDROID_HOME").orNull?.let { root -> file("$root/ndk") }
+    if (ndkRoot != null && ndkRoot.resolve(pinned).isDirectory) pinned
+    else ndkRoot?.listFiles { candidate: java.io.File -> candidate.isDirectory }
+        ?.maxByOrNull { it.name }?.name
+        ?: pinned
+}
 val privacyPolicyUrl = providers.gradleProperty("privacyPolicyUrl").orNull
     ?: "https://github.com/techjarves/Mobile-Harness/blob/main/PRIVACY.md"
 val uploadStorePath = providers.environmentVariable("MH_UPLOAD_STORE_FILE").orNull
@@ -49,7 +59,12 @@ android {
     compileSdk = 36
     // F-Droid's r26b recipe installs 26.1.10909125. Keep AGP from selecting
     // its newer default NDK; local developers may override this explicitly.
-    ndkVersion = providers.gradleProperty("mhNdkVersion").orNull ?: "26.1.10909125"
+    // Fall back to any installed NDK when the pinned one is missing so local
+    // builds work without downloading a second toolchain.
+    ndkVersion = resolvedNdkVersion
+    // Local SDKs may ship an incomplete build-tools 35.0.0 (no aapt.exe);
+    // AGP bundles its own aapt2, so pin a complete build-tools revision.
+    buildToolsVersion = "36.0.0"
 
     signingConfigs {
         if (hasUploadSigning) {
@@ -94,6 +109,7 @@ android {
     productFlavors {
         create("online") {
             dimension = "runtimeDelivery"
+            isDefault = true
             buildConfigField("boolean", "OFFLINE_RUNTIME_BUNDLES", "false")
             buildConfigField("String", "RUNTIME_RELEASE_BASE_URL", buildConfigString(runtimeReleaseBaseUrl))
             buildConfigField("String", "APP_UPDATE_MANIFEST_URL", buildConfigString(appUpdateManifestUrl))
@@ -184,7 +200,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("org.apache.commons:commons-compress:1.27.1")
-    implementation("com.github.luben:zstd-jni:1.5.6-9@aar")
+    implementation("com.github.luben:zstd-jni:1.5.7-3@aar")
+    implementation("androidx.graphics:graphics-path:1.1.0")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20250107")
