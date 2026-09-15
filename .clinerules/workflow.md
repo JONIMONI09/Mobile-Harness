@@ -12,7 +12,7 @@ These rules were set by the user on 2026-09-14 and apply to EVERY session in thi
 
 ### Session start (ALWAYS first)
 1. Check for changes: `git status --short` and `git log --oneline -5`.
-2. Load project state from VibeWorks MCP: `get_project` / `list_tasks` for project "Mein Projekt".
+2. Load project state from VibeWorks MCP: `get_project` / `list_tasks` for project "Harness" (id `cmu1h6t3p02rzspn3wx1p165j`).
 3. Compare working tree vs. tasks and report deviations before doing anything else.
 
 ### During work
@@ -30,5 +30,12 @@ These rules were set by the user on 2026-09-14 and apply to EVERY session in thi
 
 ## 4. Project facts
 - Repository: JONIMONI09/Mobile-Harness (fork of techjarves/Mobile-Harness), branch main.
-- VibeWorks project: "Mein Projekt" (id `cmu1h6t3p02rzspn3wx1p165j`).
+- VibeWorks project: "Harness" (id `cmu1h6t3p02rzspn3wx1p165j`), formerly named "Mein Projekt".
 - Acceptance baseline: 33 unit tests per flavor + assembleDebug must stay green.
+
+## 5. Error Inbox (VibeWorks, since 2026-09-15)
+- Ingest URL (write-only, key embedded in the URL): `https://vibeworks.morncloud.de/api/errors/in/_xHuKoZj2qQTFQdRCjEMPB_XkiGETNX8`
+- Anyone holding the URL can only WRITE errors into the project inbox; reading requires a VibeWorks login. On abuse, generate a new key in the VibeWorks UI.
+- Ingest variants: Script/curl = universal default for this user; Browser = only for own websites (insert before all other scripts); Node.js = only for Node projects; Android apps = native crash reporter that POSTs the same payload shape (message, type, stack, url) to this URL.
+- Cline MUST call `list_errors` on the project after every CI run, app change or release, and resolve fixed errors with `resolve_error`.
+- Use the task list (create_task/add_to_today/get_today) to plan and track work; keep it current.
