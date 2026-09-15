@@ -29,10 +29,10 @@ Baseline: 33 unit tests per flavor, 0 failures + BUILD SUCCESSFUL.
 
 ## Current State (2026-09-14)
 - R1-R5 implemented, all unit tests green (33/33 per flavor), assembleOnlineDebug BUILD SUCCESSFUL
-- 4 files with uncommitted changes: `AndroidManifest.xml` (enableOnBackInvokedCallback), `ClaudeRuntimeBridge.kt` + `MainViewModel.kt` (busy-wait fix: 50ms sleep instead of CPU spin), `PocketDevApp.kt` (OAuth credentials wiring)
-- Latest release: v1.0.4 (2026-09-14, commit d858494, CI build-12 retagged to v1.0.4). Known gap: the dist/runtime-bundles tar.zst files are not in the repository, so CI offline APKs ship without bundled runtime archives.
+- v1.0.4 released (2026-09-14, commits d858494 + aa51dd2, CI runs #12/#13 green, tagged release with signed APKs + update manifest)
+- v1.0.5 in progress: CI now downloads the dist/runtime-bundles tar.zst files from the upstream runtime-2026.09.4 release (SHA-256 verified against the local manifest) before building, so offline APKs ship with the full runtime; versionCode 6 / versionName 1.0.5
 
 ## Workflow (see .clinerules/workflow.md)
-- ALWAYS check for changes first (git status + log), then sync VibeWorks MCP (project "Mein Projekt").
+- ALWAYS check for changes first (git status + log), then sync VibeWorks MCP (project "Harness", formerly "Mein Projekt").
 - ALL artifacts in ENGLISH - including every VibeWorks record (project fields, tasks, notes). Keep VibeWorks always up to date after every change.
 - Task lifecycle: DOING on start, DONE on finish. Decisions as project notes.
