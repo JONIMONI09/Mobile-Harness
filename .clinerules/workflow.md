@@ -38,4 +38,5 @@ These rules were set by the user on 2026-09-14 and apply to EVERY session in thi
 - Anyone holding the URL can only WRITE errors into the project inbox; reading requires a VibeWorks login. On abuse, generate a new key in the VibeWorks UI.
 - Ingest variants: Script/curl = universal default for this user; Browser = only for own websites (insert before all other scripts); Node.js = only for Node projects; Android apps = native crash reporter that POSTs the same payload shape (message, type, stack, url) to this URL.
 - Cline MUST call `list_errors` on the project after every CI run, app change or release, and resolve fixed errors with `resolve_error`.
+- ALWAYS review CI runs via VibeWorks after every push: `get_repo_status` (repository.ci.state + runs) and `list_problems` (redCi); check `list_errors` in the same pass.
 - Use the task list (create_task/add_to_today/get_today) to plan and track work; keep it current.

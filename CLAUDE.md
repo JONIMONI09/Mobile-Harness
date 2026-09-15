@@ -37,3 +37,4 @@ Baseline: 33 unit tests per flavor, 0 failures + BUILD SUCCESSFUL.
 - ALL artifacts in ENGLISH - including every VibeWorks record (project fields, tasks, notes). Keep VibeWorks always up to date after every change.
 - Task lifecycle: DOING on start, DONE on finish. Decisions as project notes.
 - Error Inbox (since 2026-09-15): write-only ingest URL `https://vibeworks.morncloud.de/api/errors/in/_xHuKoZj2qQTFQdRCjEMPB_XkiGETNX8` (key in URL = write-only, rotate on abuse). Check `list_errors` after CI runs/changes; resolve fixed errors. Recommended variant: Script/curl (Android app: native crash reporter).
+- ALWAYS review CI runs via VibeWorks after every push: `get_repo_status` + `list_problems` (red CI), `list_errors` in the same pass.
