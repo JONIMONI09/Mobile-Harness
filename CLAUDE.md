@@ -39,3 +39,5 @@ Baseline: 33 unit tests per flavor, 0 failures + BUILD SUCCESSFUL.
 - Error Inbox (since 2026-09-15): write-only ingest URL `https://vibeworks.morncloud.de/api/errors/in/_xHuKoZj2qQTFQdRCjEMPB_XkiGETNX8` (key in URL = write-only, rotate on abuse). Check `list_errors` after CI runs/changes; resolve fixed errors. Recommended variant: Script/curl (Android app: native crash reporter).
 - ALWAYS review CI runs via VibeWorks after every push: `get_repo_status` + `list_problems` (red CI), `list_errors` in the same pass.
 - Operational gotchas (PowerShell traps, background helpers, session hygiene) and the release recipe: see .clinerules/workflow.md sections 6-8.
+- Repo & issue separation (since 2026-09-15): GitHub issues tracked centrally in JONIMONI09/Issue-Hub; forks (JONIMONI09/vibeworks) carry no issues; cross-project analyses live in Issue-Hub/docs (the vibeworks 401 analysis was moved out of this repo at commit 77d3175). See .clinerules/workflow.md section 9.
+- VibeWorks MCP key was rotated 2026-09-15 evening (new key verified, HTTP 200); keys live only in cline_mcp_settings.json - on 401: new key in VibeWorks UI, swap header, verify with initialize curl.

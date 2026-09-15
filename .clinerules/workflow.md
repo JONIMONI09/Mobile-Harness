@@ -68,3 +68,10 @@ These rules were set by the user on 2026-09-14 and apply to EVERY session in thi
 - The full release recipe lives in the VibeWorks docs subpage "Release procedure v1.0.x" (tag at the version-bump commit, retag build-<n>, versioned asset names, upload manifest via uploads.github.com, e2e with -L/-r).
 - Error inbox + monitoring details: docs subpage "Error Inbox & Monitoring".
 - Project handbook: docs page "Project Handbook - Mobile Harness" - keep it current when project facts change.
+
+## 9. Repository & issue separation (since 2026-09-15)
+- GitHub issues live CENTRALLY in `JONIMONI09/Issue-Hub` (local: `D:\Issue-Hub`), never on forks. Template: `.github/ISSUE_TEMPLATE/upstream-finding.md`.
+- `JONIMONI09/vibeworks` = code mirror/fork of MoinMornhart/vibeworks (issues disabled by design) for potential upstream PRs; its topics are tracked as Issue-Hub issues.
+- Cross-project incident analyses belong in `Issue-Hub/docs/`, NOT in product repos (moved out of Mobile-Harness at 77d3175). Product repos only get product issues.
+- Upstream finding workflow: duplicate check on upstream -> upstream issue (if appropriate) -> Issue-Hub tracking issue with checklist -> analysis doc under Issue-Hub/docs/ -> link both in Issue-Hub README watchlist.
+- VibeWorks MCP keys: rotate in UI on 401; key lives only in cline_mcp_settings.json (never in rules/repos/notes); verify swap with MCP initialize curl (HTTP 200).
