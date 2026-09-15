@@ -9,7 +9,7 @@ Fork of [techjarves/Mobile-Harness](https://github.com/techjarves/Mobile-Harness
 - PRoot Ubuntu userspace runtime (third_party/proot, libandroid-shmem as git submodules)
 - OkHttp, Android Keystore (ApiKeyVault), Storage Access Framework
 - CI: GitHub Actions (build + release), Fastlane metadata
-- Android 9+ (minSdk 28), arm64-v8a only, app id `com.jarves.mh`, current version 1.0.3 (versionCode 4)
+- Android 9+ (minSdk 28), arm64-v8a only, app id `com.jarves.mh`, current version 1.0.4 (versionCode 5)
 
 ## Key Features (R1-R5, all implemented)
 1. **R1 Message backup**: `data/MessageBackupManager.kt` writes `message_backups.json` to filesDir; `MainViewModel.sendPrompt` halts with error state on backup failure; `TerminalScreen` shows the error above the input (`WindowInsets.safeDrawing`).
@@ -30,7 +30,7 @@ Baseline: 33 unit tests per flavor, 0 failures + BUILD SUCCESSFUL.
 ## Current State (2026-09-14)
 - R1-R5 implemented, all unit tests green (33/33 per flavor), assembleOnlineDebug BUILD SUCCESSFUL
 - 4 files with uncommitted changes: `AndroidManifest.xml` (enableOnBackInvokedCallback), `ClaudeRuntimeBridge.kt` + `MainViewModel.kt` (busy-wait fix: 50ms sleep instead of CPU spin), `PocketDevApp.kt` (OAuth credentials wiring)
-- Next: commit changes, then release v1.0.4 (version bump, mobile-harness-update.json, GitHub release)
+- Latest release: v1.0.4 (2026-09-14, commit d858494, CI build-12 retagged to v1.0.4). Known gap: the dist/runtime-bundles tar.zst files are not in the repository, so CI offline APKs ship without bundled runtime archives.
 
 ## Workflow (see .clinerules/workflow.md)
 - ALWAYS check for changes first (git status + log), then sync VibeWorks MCP (project "Mein Projekt").
