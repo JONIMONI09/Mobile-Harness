@@ -20,9 +20,18 @@ These rules were set by the user on 2026-09-14 and apply to EVERY session in thi
 - Record decisions, findings and results as English project notes (create_note).
 - Keep task titles short and clear.
 
+### If the MCP API key is invalid (HTTP 401 "Invalid or revoked API key")
+- Verify the outage with a direct curl against `https://vibeworks.morncloud.de/api/mcp` (initialize) before assuming anything else.
+- Tell the user immediately: a new API key must be generated in the VibeWorks UI; MCP bearer keys can be revoked at any time.
+- Continue all work that does not need MCP (git, builds, GitHub API, releases); record every pending VibeWorks update as an explicit backfill list and execute it as soon as the key works again.
+
+### Project protection (star protection)
+- Project "Harness" is star-protected: status and repository fields can ONLY be changed in the VibeWorks UI itself (`update_project` for status is rejected by design). Report this to the user instead of retrying.
+
 ### Session end
 - Update task statuses and project progress.
 - Add a short English work-log note with the outcome.
+- Session hygiene audit: kill every background helper process started this session (CI watchers, downloads, builds), delete their temp scripts/logs, verify `git status --short` is clean.
 
 ## 3. Verify before claiming done
 - After code changes run: `gradlew :app:testOnlineDebugUnitTest :app:testOfflineDebugUnitTest :app:assembleOnlineDebug`.
@@ -40,3 +49,22 @@ These rules were set by the user on 2026-09-14 and apply to EVERY session in thi
 - Cline MUST call `list_errors` on the project after every CI run, app change or release, and resolve fixed errors with `resolve_error`.
 - ALWAYS review CI runs via VibeWorks after every push: `get_repo_status` (repository.ci.state + runs) and `list_problems` (redCi); check `list_errors` in the same pass.
 - Use the task list (create_task/add_to_today/get_today) to plan and track work; keep it current.
+
+## 6. Background helpers (watchers, downloads, long builds)
+- Anything longer than ~25 s must run as a background `Start-Process powershell -File build\<name>.ps1` writing to a `build\<name>.log`, then poll the log in short sleeps (single commands time out at 30 s).
+- Never inline long loops in the main shell. Every helper must have a bounded loop or an exit condition (e.g. `if ($run.status -eq 'completed') { break }`).
+- Before deleting a helper script, kill its process (check `Get-CimInstance Win32_Process` by command line pattern) - a deleted script can leave an orphaned process behind.
+
+## 7. Windows/PowerShell operations gotchas (hard-learned, ALWAYS apply)
+- `git push` stderr looks like a failure but succeeds - verify with `git status -sb` and `git log origin/main --oneline -1`, never trust the stderr block.
+- Never inline JSON in curl args; always temp file + `--data-binary @file`.
+- PS 5.1 `Set-Content -Encoding UTF8` writes a BOM -> GitHub API answers 400 "Problems parsing JSON". Use `[System.IO.File]::WriteAllText($path, $json, (New-Object System.Text.UTF8Encoding($false)))`.
+- PowerShell has no bash `<<<`; feed stdin via a file and `cmd /c "git credential fill < file"`.
+- GitHub release asset uploads go to `https://uploads.github.com/...`, NOT `https://api.github.com/...`.
+- Release download URLs redirect (302): use `curl -L`; to verify availability use a range request `-r 0-0` (expect 206), `-I` HEAD alone is not conclusive.
+- Expect the 30 s single-command timeout: design every command to either finish fast or delegate to a background helper (see rule 6).
+
+## 8. Release procedure & docs
+- The full release recipe lives in the VibeWorks docs subpage "Release procedure v1.0.x" (tag at the version-bump commit, retag build-<n>, versioned asset names, upload manifest via uploads.github.com, e2e with -L/-r).
+- Error inbox + monitoring details: docs subpage "Error Inbox & Monitoring".
+- Project handbook: docs page "Project Handbook - Mobile Harness" - keep it current when project facts change.
