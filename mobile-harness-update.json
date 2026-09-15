@@ -1,17 +1,17 @@
 {
-  "versionCode": 5,
-  "versionName": "1.0.4",
-  "notes": "GitHub OAuth credentials now reach the coding agent, silent commands such as /compact run without chat messages, message backup failures surface as a dismissible error banner, busy-wait loops were removed, predictive back is enabled, and in-app updates are now served from this fork. Note: this offline APK currently ships without bundled runtime archives; the runtime downloads on first setup.",
+  "versionCode": 6,
+  "versionName": "1.0.5",
+  "notes": "The offline APK now ships with the full bundled runtime (Ubuntu core, Python and Android toolchain archives, SHA-256 verified at CI build time) - no more runtime download on first setup. Carried over from v1.0.4: GitHub OAuth credentials reach the coding agent, silent commands such as /compact run without chat messages, message backup failures surface as a dismissible error banner, and in-app updates are served from this fork.",
   "artifacts": {
     "online": {
-      "url": "https://github.com/JONIMONI09/Mobile-Harness/releases/download/v1.0.4/mobile-harness-online-v1.0.4.apk",
-      "sha256": "77419897992c091bed77f092400eea35880fc916e8e560359c37751ba57c02a7",
+      "url": "https://github.com/JONIMONI09/Mobile-Harness/releases/download/v1.0.5/mobile-harness-online-v1.0.5.apk",
+      "sha256": "732c42ce0d525a03a142fd0694f607dac1495d98b89cf614bbdcbd5a2b7fd6a1",
       "sizeBytes": 45898942
     },
     "offline": {
-      "url": "https://github.com/JONIMONI09/Mobile-Harness/releases/download/v1.0.4/mobile-harness-offline-v1.0.4.apk",
-      "sha256": "bd27eade59da76fdb78759fe47f71909a613e09d4f40671a9068e04ea667e31c",
-      "sizeBytes": 45898942
+      "url": "https://github.com/JONIMONI09/Mobile-Harness/releases/download/v1.0.5/mobile-harness-offline-v1.0.5.apk",
+      "sha256": "5f8feaa55e34d7161e18716abffceb83713ae77a26f18d6c744c3013340ff7dd",
+      "sizeBytes": 819817964
     }
   }
 }
