@@ -22,6 +22,8 @@
         android:theme="@style/Theme.PocketDev"
         android:usesCleartextTraffic="false"
         android:enableOnBackInvokedCallback="true">
+        <!-- nosemgrep:java.android.security.exported_activity.exported_activity -->
+        <!-- MainActivity must stay exported: LAUNCHER entry point + GitHub OAuth deep-link target (mobileharness://github-callback). -->
         <activity
             android:name=".MainActivity"
             android:exported="true"

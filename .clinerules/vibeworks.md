@@ -20,7 +20,7 @@ VibeWorks (https://vibeworks.morncloud.de) is the user's self-hosted project con
 - Work through open tasks completely, highest priority first, and keep their status up to date – don't stop halfway and don't leave tasks in DOING when you are done.
 
 ## Language
-- Write everything you store in VibeWorks – task titles, descriptions, notes, docs, memos – in English (user rule 2026-09-14; the vendor default of German is overridden).
+- Vendor default (2026-09-16 update of these rules): write VibeWorks records in German, the user's language. USER OVERRIDE (2026-09-14, still in force): everything stored in VibeWorks - task titles, descriptions, notes, docs, memos - is written in ENGLISH. Existing German records are translated to English on sight.
 
 ## Ground rules
 - Only use the tools listed below. If something is not in the list, VibeWorks can't do it – say so instead of guessing or inventing a workaround.

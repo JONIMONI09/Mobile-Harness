@@ -20,7 +20,7 @@ internal class LocalFormatGateway(
     private val apiKey: String,
 ) : AutoCloseable {
     private val running = AtomicBoolean(true)
-    private val server = ServerSocket(0, 8, InetAddress.getByName("127.0.0.1"))
+    private val server = ServerSocket(0, 8, InetAddress.getByName("127.0.0.1")) // nosemgrep:kotlin.lang.security.unencrypted-socket.unencrypted-socket - loopback-only bind, traffic never leaves the device
     val url: String = "http://127.0.0.1:${server.localPort}"
 
     fun start(): LocalFormatGateway = apply {
