@@ -24,6 +24,8 @@ These rules were set by the user on 2026-09-14 and apply to EVERY session in thi
 - Verify the outage with a direct curl against `https://vibeworks.morncloud.de/api/mcp` (initialize) before assuming anything else.
 - Tell the user immediately: a new API key must be generated in the VibeWorks UI; MCP bearer keys can be revoked at any time.
 - Continue all work that does not need MCP (git, builds, GitHub API, releases); record every pending VibeWorks update as an explicit backfill list and execute it as soon as the key works again.
+- Bridge-401 vs. key-401: Cline's MCP bridge can answer 401 transiently while the key is still valid. Verify with a direct curl `initialize` (expect HTTP 200) BEFORE rotating the key (verified 2026-09-16).
+- Tool inventory: 34 tools as of 2026-09-16 (verified via MCP `tools/list`; vendor agent rules saved at `.clinerules/vibeworks.md`). Re-check `tools/list` after VibeWorks updates – new tools appear there first.
 
 ### Project protection (star protection)
 - Project "Harness" is star-protected: status and repository fields can ONLY be changed in the VibeWorks UI itself (`update_project` for status is rejected by design). Report this to the user instead of retrying.
@@ -63,6 +65,9 @@ These rules were set by the user on 2026-09-14 and apply to EVERY session in thi
 - GitHub release asset uploads go to `https://uploads.github.com/...`, NOT `https://api.github.com/...`.
 - Release download URLs redirect (302): use `curl -L`; to verify availability use a range request `-r 0-0` (expect 206), `-I` HEAD alone is not conclusive.
 - Expect the 30 s single-command timeout: design every command to either finish fast or delegate to a background helper (see rule 6).
+- `curl -H "Bearer ..."` WITHOUT the field-name prefix silently DROPS the header -> hidden 401 "missing". Always pass the full header: `-H "Authorization: Bearer ..."`.
+- Never use `$$` or doubled `$` in inline commands (the command runner mangles them into parse errors). Multi-statement PowerShell goes into a temp `.ps1` script instead.
+- `git pull` stderr trips PS 5.1 NativeCommandError - verify sync via `git log --oneline -1` / `git status -sb`, never via the exit code.
 
 ## 8. Release procedure & docs
 - The full release recipe lives in the VibeWorks docs subpage "Release procedure v1.0.x" (tag at the version-bump commit, retag build-<n>, versioned asset names, upload manifest via uploads.github.com, e2e with -L/-r).
