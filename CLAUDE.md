@@ -34,6 +34,9 @@ Baseline: 33 unit tests per flavor, 0 failures + BUILD SUCCESSFUL.
 
 ## Workflow (see .clinerules/workflow.md)
 - ALWAYS check for changes first (git status + log), then sync VibeWorks MCP (project "Harness", formerly "Mein Projekt").
+- VibeWorks FIRST (2026-09-16): pre-register every local change in VibeWorks (task DOING or decision note) BEFORE editing files locally; update records after every change.
+- Code network first for code facts (anti-hallucination): `list_code_files` at session start (refreshes the repo copy), `search_code`/`get_code_graph` before code claims, durable "why" knowledge as file memos (`add_code_memo`). Never reconstruct ids/line numbers from truncated output - re-fetch.
+- Repo-check loop: close the individual finding tasks VibeWorks creates (English risk explanation) - notes alone cause re-creation.
 - ALL artifacts in ENGLISH - including every VibeWorks record (project fields, tasks, notes). Keep VibeWorks always up to date after every change.
 - Task lifecycle: DOING on start, DONE on finish. Decisions as project notes.
 - Error Inbox (since 2026-09-15): write-only ingest URL `https://vibeworks.morncloud.de/api/errors/in/_xHuKoZj2qQTFQdRCjEMPB_XkiGETNX8` (key in URL = write-only, rotate on abuse). Check `list_errors` after CI runs/changes; resolve fixed errors. Recommended variant: Script/curl (Android app: native crash reporter).
