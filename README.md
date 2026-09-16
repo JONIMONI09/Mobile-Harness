@@ -13,7 +13,7 @@
 
   <br />
 
-  [![Release v1.0.3](https://img.shields.io/badge/Release-v1.0.3-F28C52?style=flat-square&logo=github&logoColor=white)](../../releases)
+  [![Release v1.0.5](https://img.shields.io/badge/Release-v1.0.5-F28C52?style=flat-square&logo=github&logoColor=white)](../../releases)
   [![Android 9+](https://img.shields.io/badge/Android-9%2B-3DDC84?style=flat-square&logo=android&logoColor=white)](#system-requirements)
   [![ARM64](https://img.shields.io/badge/CPU-ARM64-5B8DEF?style=flat-square)](#system-requirements)
   [![MIT License](https://img.shields.io/badge/License-MIT-8B7CF6?style=flat-square&logo=opensourceinitiative&logoColor=white)](LICENSE)
@@ -56,7 +56,7 @@
 
 <div align="center">
   <h3>Choose the edition that fits your setup</h3>
-  <p>Both editions contain the complete Mobile Harness app and support secure in-app updates beginning with v1.0.3.</p>
+  <p>Both editions contain the complete Mobile Harness app and support secure in-app updates beginning with v1.0.5.</p>
 </div>
 
 <table>
@@ -169,11 +169,11 @@ Mobile Harness unites modern **Jetpack Compose UI** with a self-contained **Ubun
 Get up and running in 3 guided steps:
 
 ### 1. Download & Install
-Download the latest signed release APK from [GitHub Releases](https://github.com/techjarves/Mobile-Harness/releases/latest).
+Download the latest signed release APK from [GitHub Releases](../../releases/latest).
 
 ```text
 Target Architecture : ARM64 (arm64-v8a)
-Package Version     : v1.0.3
+Package Version     : v1.0.5
 Minimum OS Level    : Android 9.0 (API 28)
 ```
 
