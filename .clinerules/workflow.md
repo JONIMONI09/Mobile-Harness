@@ -80,6 +80,7 @@ These rules were set by the user on 2026-09-14 and apply to EVERY session in thi
 
 ## 9. Repository & issue separation (since 2026-09-15)
 - GitHub issues live CENTRALLY in `JONIMONI09/Issue-Hub` (local: `D:\Issue-Hub`), never on forks. Template: `.github/ISSUE_TEMPLATE/upstream-finding.md`.
+- **Issue-Hub upkeep is a standing duty (2026-09-16)**: every upstream finding / cross-repo incident gets an Issue-Hub issue (template) + analysis doc under `Issue-Hub/docs/` + README watchlist entry; check open Issue-Hub issues at session start; close issues only with a resolution comment; at session end every cross-repo finding must have an issue. Keep the local clone `D:\Issue-Hub` in sync (pull before, push after, verify `git status -sb`).
 - `JONIMONI09/vibeworks` = code mirror/fork of MoinMornhart/vibeworks (issues disabled by design) for potential upstream PRs; its topics are tracked as Issue-Hub issues.
 - Cross-project incident analyses belong in `Issue-Hub/docs/`, NOT in product repos (moved out of Mobile-Harness at 77d3175). Product repos only get product issues.
 - Upstream finding workflow: duplicate check on upstream -> upstream issue (if appropriate) -> Issue-Hub tracking issue with checklist -> analysis doc under Issue-Hub/docs/ -> link both in Issue-Hub README watchlist.
