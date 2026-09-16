@@ -14,6 +14,7 @@ These rules were set by the user on 2026-09-14 and apply to EVERY session in thi
 0. **VibeWorks FIRST + code network as ground truth (2026-09-16)**:
    - Pre-register every local change in VibeWorks (task DOING or decision note) BEFORE editing files locally; update records after every change.
    - Call `list_code_files` at session start (refreshes the repo copy / sync signal), use `search_code`/`get_code_graph` before code claims, pin durable "why" knowledge with `add_code_memo`. Never reconstruct ids/line numbers from truncated output - re-fetch.
+   - Known limitation (2026-09-16, Issue-Hub #5): `get_code_graph` currently fails with `graph.errors.noFiles` even when `list_code_files` works (upstream indexer bug). Until fixed: use `search_code` + file memos as the code-network ground truth; memos still return via get_code_graph.
    - Repo-check loop: close the individual finding tasks VibeWorks creates (English risk explanation) - notes alone cause re-creation on the next run.
 1. Check for changes: `git status --short` and `git log --oneline -5`.
 2. Load project state from VibeWorks MCP: `get_project` / `list_tasks` for project "Harness" (id `cmu1h6t3p02rzspn3wx1p165j`).
