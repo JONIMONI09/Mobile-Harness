@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - name: Delete oldest artifacts to free storage quota
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         continue-on-error: true
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -54,12 +54,12 @@ jobs:
             console.log(`Cleanup done. Deleted ${toDelete.length} artifact(s).`);
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           submodules: 'recursive'
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           java-version: '17'
           distribution: 'temurin'
@@ -67,7 +67,7 @@ jobs:
 
       # C++ Cache für den extremen Speed-Boost beim 2. Durchlauf
       - name: Cache C++ Build Outputs
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: app/.cxx
           key: cxx-${{ runner.os }}-${{ github.sha }}
@@ -121,7 +121,7 @@ jobs:
 
       - name: Create GitHub Release (PRIMARY)
         if: github.event_name == 'push'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           tag_name: "build-${{ github.run_number }}"
           name: "Build #${{ github.run_number }} (${{ github.ref_name }})"
@@ -142,7 +142,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload APK as workflow artifact (best-effort)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         continue-on-error: true
         with:
           name: Mobile-Harness-APK
