@@ -35,6 +35,7 @@ Baseline: 33 unit tests per flavor, 0 failures + BUILD SUCCESSFUL.
 ## Workflow (see .clinerules/workflow.md)
 - ALWAYS check for changes first (git status + log), then sync VibeWorks MCP (project "Harness", formerly "Mein Projekt").
 - VibeWorks FIRST (2026-09-16): pre-register every local change in VibeWorks (task DOING or decision note) BEFORE editing files locally; update records after every change.
+- Mandatory (vendor rules 2026-09-16): no work without a task; status always true (DOING + assignee, BLOCKED with reason, DONE only when finished); end every reply by checking open tasks; work through tasks completely highest-first; recurring tasks - DONE creates the next occurrence, never complete the new occurrence to clear the list.
 - Code network first for code facts (anti-hallucination): `list_code_files` at session start (refreshes the repo copy), `search_code`/`get_code_graph` before code claims, durable "why" knowledge as file memos (`add_code_memo`). Never reconstruct ids/line numbers from truncated output - re-fetch.
 - Repo-check loop: close the individual finding tasks VibeWorks creates (English risk explanation) - notes alone cause re-creation.
 - ALL artifacts in ENGLISH - including every VibeWorks record (project fields, tasks, notes). Keep VibeWorks always up to date after every change.

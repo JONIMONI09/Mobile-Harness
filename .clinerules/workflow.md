@@ -18,6 +18,7 @@ These rules were set by the user on 2026-09-14 and apply to EVERY session in thi
    - Repo-check loop: close the individual finding tasks VibeWorks creates (English risk explanation) - notes alone cause re-creation on the next run.
 1. Check for changes: `git status --short` and `git log --oneline -5`.
 2. Load project state from VibeWorks MCP: `get_project` / `list_tasks` for project "Harness" (id `cmu1h6t3p02rzspn3wx1p165j`).
+3. Mandatory (vendor rules 2026-09-16): no work without a task; status always true (DOING + assignee, BLOCKED with reason, DONE only when finished); end every reply by checking open tasks; work through tasks completely highest-first; recurring tasks - DONE creates the next occurrence, never complete the new occurrence to clear the list.
 3. Compare working tree vs. tasks and report deviations before doing anything else.
 
 ### During work
