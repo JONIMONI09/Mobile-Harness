@@ -29,7 +29,7 @@ These rules were set by the user on 2026-09-14 and apply to EVERY session in thi
 - Tell the user immediately: a new API key must be generated in the VibeWorks UI; MCP bearer keys can be revoked at any time.
 - Continue all work that does not need MCP (git, builds, GitHub API, releases); record every pending VibeWorks update as an explicit backfill list and execute it as soon as the key works again.
 - Bridge-401 vs. key-401: Cline's MCP bridge can answer 401 transiently while the key is still valid. Verify with a direct curl `initialize` (expect HTTP 200) BEFORE rotating the key (verified 2026-09-16).
-- Tool inventory: 34 tools as of 2026-09-16 (verified via MCP `tools/list`; vendor agent rules saved at `.clinerules/vibeworks.md`). Re-check `tools/list` after VibeWorks updates – new tools appear there first.
+- Tool inventory: 34 tools as of 2026-09-16 (verified via MCP `tools/list`; vendor agent rules saved at `.clinerules/vibeworks.md`). Re-check `tools/list` after VibeWorks updates – new tools appear there first. Vendor agent-rules sync (2026-09-16): on every "agent rules have changed" reminder from VibeWorks, re-fetch `get_agent_rules` immediately, merge into `.clinerules/vibeworks.md` (keep the English-records override), call `confirm_agent_rules`, and mirror the change into `.clinerules/workflow.md`, `~/.cline/rules/00-workflow-rules.md` and `CLAUDE.md` in the same session.
 
 ### Project protection (star protection)
 - Project "Harness" is star-protected: status and repository fields can ONLY be changed in the VibeWorks UI itself (`update_project` for status is rejected by design). Report this to the user instead of retrying.
@@ -64,6 +64,8 @@ These rules were set by the user on 2026-09-14 and apply to EVERY session in thi
 ## 7. Windows/PowerShell operations gotchas (hard-learned, ALWAYS apply)
 - `git push` stderr looks like a failure but succeeds - verify with `git status -sb` and `git log origin/main --oneline -1`, never trust the stderr block.
 - Never inline JSON in curl args; always temp file + `--data-binary @file`.
+- PS 5.1 native-arg quoting: `--data-binary @"$path"` at argument start parses as a HERE-STRING HEADER -> parse error; and `'{\"ref\":\"main\"}'` gets its inner quotes STRIPPED when passed to native exes -> curl sends `{ref:main}` -> GitHub 400 \"Problems parsing JSON\". Correct pattern: put the path in a variable and pass the EXPRESSION form `--data-binary (\"@\" + $path)` (verified 2026-09-16).
+- Never invent full SHAs from short hashes for API queries (e.g. head_sha filters); resolve first with `git rev-parse HEAD` or fetch the full sha from the API - invented SHAs silently return empty result sets.
 - PS 5.1 `Set-Content -Encoding UTF8` writes a BOM -> GitHub API answers 400 "Problems parsing JSON". Use `[System.IO.File]::WriteAllText($path, $json, (New-Object System.Text.UTF8Encoding($false)))`.
 - PowerShell has no bash `<<<`; feed stdin via a file and `cmd /c "git credential fill < file"`.
 - GitHub release asset uploads go to `https://uploads.github.com/...`, NOT `https://api.github.com/...`.
@@ -72,6 +74,8 @@ These rules were set by the user on 2026-09-14 and apply to EVERY session in thi
 - `curl -H "Bearer ..."` WITHOUT the field-name prefix silently DROPS the header -> hidden 401 "missing". Always pass the full header: `-H "Authorization: Bearer ..."`.
 - Never use `$$` or doubled `$` in inline commands (the command runner mangles them into parse errors). Multi-statement PowerShell goes into a temp `.ps1` script instead.
 - `git pull` stderr trips PS 5.1 NativeCommandError - verify sync via `git log --oneline -1` / `git status -sb`, never via the exit code.
+- PS 5.1 `.Count` can be null/absent on single-object pipeline results - guard scalar results before indexing (verified 2026-09-16).
+- `Get-Content -Raw` can return an ETS-wrapped object instead of a plain string -> JSON body corrupted -> GitHub 422 "Problems parsing JSON"; always cast `[string](Get-Content -Raw $path)` before embedding into request payloads (verified 2026-09-16).
 
 ## 8. Release procedure & docs
 - The full release recipe lives in the VibeWorks docs subpage "Release procedure v1.0.x" (tag at the version-bump commit, retag build-<n>, versioned asset names, upload manifest via uploads.github.com, e2e with -L/-r).
