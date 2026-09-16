@@ -27,10 +27,13 @@ gradlew :app:testOnlineDebugUnitTest :app:testOfflineDebugUnitTest :app:assemble
 
 Baseline: 33 unit tests per flavor, 0 failures + BUILD SUCCESSFUL.
 
-## Current State (2026-09-14)
-- R1-R5 implemented, all unit tests green (33/33 per flavor), assembleOnlineDebug BUILD SUCCESSFUL
-- v1.0.4 released (2026-09-14, commits d858494 + aa51dd2, CI runs #12/#13 green, tagged release with signed APKs + update manifest)
-- v1.0.5 shipped (2026-09-15, commit 8261ed2, CI run #14 green): CI downloads the 3 runtime bundles from upstream release runtime-2026.09.4 (SHA-256 verified) before building; offline APK now ~782 MB with `assets/offline/runtime/*` fully bundled (online APK ~44 MB); versionCode 6 / versionName 1.0.5
+## Current State (2026-09-16)
+- **Current release: v1.0.5** (2026-09-15, commit 8261ed2, CI run #14 green): CI downloads the 3 runtime bundles from upstream release runtime-2026.09.4 (SHA-256 verified) before building; offline APK ~782 MB with `assets/offline/runtime/*` fully bundled (online APK ~44 MB); versionCode 6 / versionName 1.0.5.
+- Release history: v1.0.4 (2026-09-14, commits d858494 + aa51dd2, CI runs #12/#13 green), v1.0.3 and earlier.
+- R1-R5 implemented, all unit tests green (33/33 per flavor), assembleOnlineDebug BUILD SUCCESSFUL.
+- Repo-Check: 5 semgrep findings verified as false positives and silenced with official `nosemgrep` annotations (commit 1e40305, Build + Repo-Check both green) - stops the recurring repo-check task loop. Remaining legitimate alert: the DeepSeek key in the git history (Issue-Hub #3, awaiting upstream rotation).
+- Known MCP limitation: `get_code_graph` returns `graph.errors.noFiles` (Issue-Hub #5, upstream bug) - use `search_code` + file memos as the code-network ground truth until fixed.
+- MCP setup facts (endpoint, `Authorization: Bearer vw_...`, 401 codes, traps): VibeWorks doc "VibeWorks MCP setup (verified facts for agents)" and Issue-Hub `docs/vibeworks-mcp-setup.md`.
 
 ## Workflow (see .clinerules/workflow.md)
 - ALWAYS check for changes first (git status + log), then sync VibeWorks MCP (project "Harness", formerly "Mein Projekt").
