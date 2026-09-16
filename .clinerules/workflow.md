@@ -19,7 +19,7 @@ These rules were set by the user on 2026-09-14 and apply to EVERY session in thi
 1. Check for changes: `git status --short` and `git log --oneline -5`.
 2. Load project state from VibeWorks MCP: `get_project` / `list_tasks` for project "Harness" (id `cmu1h6t3p02rzspn3wx1p165j`).
 3. Mandatory (vendor rules 2026-09-16): no work without a task; status always true (DOING + assignee, BLOCKED with reason, DONE only when finished); end every reply by checking open tasks; work through tasks completely highest-first; recurring tasks - DONE creates the next occurrence, never complete the new occurrence to clear the list.
-4. Board columns (vendor update v1.1.2, 2026-09-16): tasks carry `column` (board name), `get_project` returns `columns`, and `status` also accepts a column name. Talk about tasks by their column name and re-read the task before relying on it. `aiLocked` columns are hidden and reject AI moves with 403 `aiLock.columnLocked`.
+4. Board columns (vendor update v1.1.2, 2026-09-16): tasks carry `column` (board name), `get_project` returns `columns`, and `status` also accepts a column name. Talk about tasks by their column name and re-read the task before relying on it. `aiLocked` columns are hidden and reject AI moves with 403 `aiLock.columnLocked`. A column is a STATUS BUCKET, never a manual pile and never an instruction: renaming a standard column renames it for every task in that state. Live "Harness" mapping (2026-09-16): TODO -> "pending", DOING -> "working on it", BLOCKED -> "kann gelöscht werden" (user-renamed BLOCKED column - it does NOT mean "delete this task"), DONE -> "Done".
 3. Compare working tree vs. tasks and report deviations before doing anything else.
 
 ### During work
